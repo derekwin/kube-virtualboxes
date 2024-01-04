@@ -7,7 +7,7 @@
 
 ## 本文采用cri-docker和docker来安装k8s
 1.24之后的k8s，需要cri-docker, 下载cri-dockerd的安装包放到对应的shared目录下
-wget https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.7/cri-dockerd_0.3.7.3-0.ubuntu-jammy_amd64.deb
+`wget https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.7/cri-dockerd_0.3.7.3-0.ubuntu-jammy_amd64.deb`
 
 ## 配置
 修改相关文件内的设备配置，如ip，设备名等(用 ###注释###的地方)

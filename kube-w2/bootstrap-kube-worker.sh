@@ -12,7 +12,7 @@ echo "nameserver 114.114.114.114" | sudo tee /etc/resolv.conf > /dev/null
 
 # add host
 ### 修改每个机器对应的host ###
-echo "192.168.33.10 kube-master" | sudo tee -a /etc/hosts
+echo "192.168.33.20 kube-master" | sudo tee -a /etc/hosts
 echo "192.168.33.11 kube-w1" | sudo tee -a /etc/hosts
 echo "192.168.33.12 kube-w2" | sudo tee -a /etc/hosts
 
@@ -67,6 +67,9 @@ echo "deb http://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main" | sud
 
 sudo apt-get update && sudo apt-get install -y kubelet=$KUBE_VER-00 kubeadm=$KUBE_VER-00 kubectl=$KUBE_VER-00
 sudo apt-mark hold kubelet kubeadm kubectl
+
+echo "KUBELET_EXTRA_ARGS=--node-ip=$HOST_PRIVATE_IP" | sudo tee /etc/default/kubelet > /dev/null
+sudo systemctl daemon-reload
 sudo systemctl enable kubelet
 
 
@@ -89,19 +92,22 @@ sudo sysctl -p
 # /lib/systemd/system/cri-docker.service  if cri-docker isn't enabled， change this file
 # /etc/systemd/system/multi-user.target.wants/cri-docker.service  if cri-docker is enabled， change this file
 # 脚本修改
-sudo kubeadm config images list --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v$KUBE_VER > /shared/images.list
-for line in $(cat /shared/images.list)
-do
-  ifpause=$(echo $line | grep "pause")
-  if [[ "$ifpause" != "" ]]; then
-    pattern="ExecStart=\/usr\/bin\/cri-dockerd --container-runtime-endpoint fd:\/\/"
-    ifhasset=$(cat /etc/systemd/system/multi-user.target.wants/cri-docker.service | grep "pause")
-    if [[ "$ifhasset" == "" ]]; then
-      append_string="  --pod-infra-container-image=$line"
-      sudo sed -i "s|$pattern|$pattern$append_string|" /etc/systemd/system/multi-user.target.wants/cri-docker.service
-    fi
-  fi
-done
+# sudo kubeadm config images list --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v$KUBE_VER > /shared/images.list
+# for line in $(cat /shared/images.list)
+# do
+#   ifpause=$(echo $line | grep "pause")
+#   if [[ "$ifpause" != "" ]]; then
+#     pattern="ExecStart=\/usr\/bin\/cri-dockerd --container-runtime-endpoint fd:\/\/"
+#     ifhasset=$(cat /etc/systemd/system/multi-user.target.wants/cri-docker.service | grep "pause")
+#     if [[ "$ifhasset" == "" ]]; then
+#       append_string="  --pod-infra-container-image=$line"
+#       sudo sed -i "s|$pattern|$pattern$append_string|" /etc/systemd/system/multi-user.target.wants/cri-docker.service
+#     fi
+#   fi
+# done
+# 直接指定行，进行命令追加
+escaped_string_to_add=$(sed 's/[&/\]/\\&/g' <<< " --pod-infra-container-image=registry.aliyuncs.com/google_containers/pause:3.9")
+sudo sed -i '10s/$/'"$escaped_string_to_add"'/' /etc/systemd/system/multi-user.target.wants/cri-docker.service
 # 手动修改
 # sudo vim /etc/systemd/system/multi-user.target.wants/cri-docker.service， 在ExecStart=/usr/bin/cri-dockerd --container-runtime-endpoint fd:后添加
 # --pod-infra-container-image=registry.aliyuncs.com/google_containers/pause:3.9  # 对应/shared/images.list中pause的版本
@@ -114,5 +120,10 @@ sudo kubeadm config images pull --cri-socket unix:///var/run/cri-dockerd.sock --
 sudo docker load < /shared/flannel.tar
 # 在外网服务器下载到docker pull flannel/flannel-cni-plugin:v1.2.0，导出 docker save flannel/flannel-cni-plugin > flannel-plugin.tar
 sudo docker load < /shared/flannel-plugin.tar
+
+# 在配置1.28版本k8s的过程中，使用flannel cni，在加入节点时候，会pull registry.k8s.io/pause:3.6导致节点加入不成功，目前不知道原因，
+# 所以在主从节点均手动下载好该镜像
+sudo docker pull registry.aliyuncs.com/google_containers/pause:3.6
+sudo docker tag registry.aliyuncs.com/google_containers/pause:3.6 registry.k8s.io/pause:3.6
 
 # sudo kubeadm join

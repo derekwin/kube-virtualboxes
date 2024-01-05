@@ -2,9 +2,10 @@ KUBE_VER=$1
 HOSTNAME=$2
 
 # set dns
-echo "nameserver 114.114.114.114" | sudo tee /etc/resolv.conf > /dev/null
+# echo "nameserver 114.114.114.114" | sudo tee /etc/resolv.conf > /dev/null
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
 
-# sudo hostnamectl set-hostname $HOSTNAME  # 确认下在shell里面变量赋值是否生效了，难道是设置hostname导致了错误？
+sudo hostnamectl set-hostname $HOSTNAME  #
 HOST_PRIVATE_IP=$(hostname -I | cut -d ' ' -f2)
 printf "Installing K8=$KUBE_VER-00 on $HOSTNAME with IP: $HOST_PRIVATE_IP\n"
 
@@ -17,7 +18,7 @@ echo "192.168.33.12 kube-w2" | sudo tee -a /etc/hosts
 
 # install docker : https://docs.docker.com/engine/install/ubuntu/
 # Add Docker's official GPG key:
-sudo apt-get update && sudo apt-get install -y ca-certificates curl gnupg
+sudo apt-get update && sudo apt-get install -y ca-certificates curl gnupg net-tools
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
@@ -143,7 +144,13 @@ sudo docker load < /shared/flannel.tar
 sudo docker load < /shared/flannel-plugin.tar
 # kube-flannel: https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 kubectl create -f /shared/flannel.yaml  # kubectl delete -f /shared/flannel.yaml
-# kubectl get pods -A
-# kubectl describe pods kube-flannel-ds-6l8rl -n kube-flannel
 
+# 在配置1.28版本k8s的过程中，使用flannel cni，在加入节点时候，会pull registry.k8s.io/pause:3.6导致节点加入不成功，目前不知道原因，
+# 所以在主从节点均手动下载好该镜像
+sudo docker pull registry.aliyuncs.com/google_containers/pause:3.6
+sudo docker tag registry.aliyuncs.com/google_containers/pause:3.6 registry.k8s.io/pause:3.6
+
+# kubectl get pods -A
+# kubectl describe pods kube-flannel-ds-xm7tq -n kube-flannel
+# kubectl describe pods coredns-66f779496c-k7z78 -n kube-system
 kubectl get nodes -o wide

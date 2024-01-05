@@ -67,7 +67,6 @@ echo "deb http://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main" | sud
 
 sudo apt-get update && sudo apt-get install -y kubelet=$KUBE_VER-00 kubeadm=$KUBE_VER-00 kubectl=$KUBE_VER-00
 sudo apt-mark hold kubelet kubeadm kubectl
-echo "KUBELET_EXTRA_ARGS=--node-ip=$HOST_PRIVATE_IP" | sudo tee /etc/default/kubelet > /dev/null
 sudo systemctl enable kubelet
 
 
@@ -109,5 +108,11 @@ done
 sudo systemctl daemon-reload
 sudo systemctl restart cri-docker
 
+# worker k8s相关镜像
+sudo kubeadm config images pull --cri-socket unix:///var/run/cri-dockerd.sock --kubernetes-version v$KUBE_VER --image-repository registry.aliyuncs.com/google_containers
+# flannel 相关镜像
+sudo docker load < /shared/flannel.tar
+# 在外网服务器下载到docker pull flannel/flannel-cni-plugin:v1.2.0，导出 docker save flannel/flannel-cni-plugin > flannel-plugin.tar
+sudo docker load < /shared/flannel-plugin.tar
 
-# kubeadm join
+# sudo kubeadm join

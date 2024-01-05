@@ -1,0 +1,7 @@
+registry.aliyuncs.com/google_containers/kube-apiserver:v1.28.0
+registry.aliyuncs.com/google_containers/kube-controller-manager:v1.28.0
+registry.aliyuncs.com/google_containers/kube-scheduler:v1.28.0
+registry.aliyuncs.com/google_containers/kube-proxy:v1.28.0
+registry.aliyuncs.com/google_containers/pause:3.9
+registry.aliyuncs.com/google_containers/etcd:3.5.9-0
+registry.aliyuncs.com/google_containers/coredns:v1.10.1
